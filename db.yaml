@@ -1,0 +1,4 @@
+mysql_host : 'localhost'
+mysql_user : 'Laksh'
+mysql_password : 'password1'
+mysql_db : 'guviforum'
