@@ -29,11 +29,11 @@ def register():
 			email = form.email.data
 			password = form.password.data
 			cur = mysql.connection.cursor()
-			query2 = "SELECT id from user where email=%s"
+			query2 = "SELECT id from userinfo where email=%s"
 			emailid =(email,)
 			count = cur.execute(query2,emailid)
 			if  count== 0 :
-				query1 = cur.execute("INSERT INTO user(username,email,password) VALUES(%s,%s,%s)",(name,email,password))
+				query1 = cur.execute("INSERT INTO userinfo(username,email,password) VALUES(%s,%s,%s)",(name,email,password))
 				mysql.connection.commit()
 				cur.close()
 				flash(f'Account Created Successfully for {form.email.data}', 'success')
@@ -48,15 +48,17 @@ def register():
 def login():
 	form = GuviLogin()
 	if form.validate_on_submit():
-		email = form.email.data
+		count = 0
+		session['user'] = form.email.data
 		password = form.password.data
 		cur = mysql.connection.cursor()
-		query2 = "SELECT id from user where email=%s and password=%s"
-		userlogin =(email,password)
-		count = cur.execute(query2,userlogin)
+		cur.execute("SELECT id from userinfo where email=%s and password=%s",(session['user'],password))
+		rv = cur.fetchall()
+		count = rv[0][0]
+		
 		if count>0:
+			session['user'] = form.email.data
 			flash('You have been logged in!', 'success')
-			session['user'] = email
 			return redirect(url_for('profile'))
 		else:
 			flash('Login Unsuccessful. Please check username and password', 'danger')
@@ -69,15 +71,25 @@ def profile():
 		prof_form = PersonalDetails()
 		if prof_form.validate_on_submit():
 			if request.method == 'POST':
+				id1="id"
 				dob = prof_form.dob.data
 				contact = prof_form.contact.data
 				age = prof_form.age.data
-				"""cur = mysql.connection.cursor()
-				
-				query = cur.execute("INSERT INTO profile(id,dob,contact,age) VALUES(%s,%s,%s)",(id1,dob,contact,age))
-				mysql.connection.commit()
-				cur.close()"""
+				curs = mysql.connection.cursor()
+				curs.execute('''SELECT id from userinfo where email=%s''',(session['user'],))
+				rv =curs.fetchall()
+				value = rv[0][0]
+				try:
+					query = curs.execute("INSERT INTO profile(id,dob,contact,age) VALUES(%s,%s,%s,%s)",(value,dob,contact,age))
+					mysql.connection.commit()
+					curs.close()
+				except:
+					query = curs.execute("UPDATE profile SET id=%s,dob=%s,contact=%s,age=%s",(value,dob,contact,age))
+					mysql.connection.commit()
+					curs.close()
+
 		return render_template('profile.html', title = 'Profile', form=prof_form)
+	
 	
 	
 
