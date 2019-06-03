@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, flash, redirect, request
+from flask import Flask, render_template, url_for, flash, redirect, request, session
 from forms import GuviRegistration, GuviLogin, PersonalDetails
 from flask_mysqldb import MySQL
 import yaml
@@ -18,35 +18,6 @@ mysql = MySQL(app)
 @app.route("/home")
 def home():
     return render_template('home.html')
-
-
-@app.route("/profile", methods=['GET','POST'])
-def profile():
-	form = GuviLogin()
-	prof_form = PersonalDetails()
-	if prof_form.validate_on_submit():
-		dob = prof_form.dob.data
-		contact = prof_form.contact.data
-		age = prof_form.age.data
-		cur = mysql.connection.cursor()
-		query = cur.execute("INSERT INTO profile(dob,contact,age) VALUES(%s,%s,%s)",(dob,contact,age))
-		mysql.connection.commit()
-		cur.close()
-	elif form.validate_on_submit():
-		email = form.email.data
-		password = form.password.data
-		cur = mysql.connection.cursor()
-		query2 = "SELECT id from user where email=%s and password=%s"
-		userlogin =(email,password)
-		count = cur.execute(query2,userlogin)
-		cur.close()
-		if count>0:
-			flash('Login Successful Update your Profile', 'success')
-			return render_template('profile.html', title='Profile', form=prof_form)
-		else:
-			flash('Login Unsuccessful. Please check username and password', 'danger')
-			return render_template('login.html', title='Login', form=form)
-	return render_template('profile.html', title='Profile', form=prof_form)
 
 @app.route("/register" , methods=['GET','POST'])
 def register():
@@ -85,11 +56,37 @@ def login():
 		count = cur.execute(query2,userlogin)
 		if count>0:
 			flash('You have been logged in!', 'success')
+			session['user'] = email
 			return redirect(url_for('profile'))
 		else:
 			flash('Login Unsuccessful. Please check username and password', 'danger')
 	return render_template('login.html', title='Login', form=form)
 
+
+@app.route("/profile", methods=['GET','POST'])
+def profile():
+	if 'user' in session:
+		prof_form = PersonalDetails()
+		if prof_form.validate_on_submit():
+			if request.method == 'POST':
+				dob = prof_form.dob.data
+				contact = prof_form.contact.data
+				age = prof_form.age.data
+				"""cur = mysql.connection.cursor()
+				
+				query = cur.execute("INSERT INTO profile(id,dob,contact,age) VALUES(%s,%s,%s)",(id1,dob,contact,age))
+				mysql.connection.commit()
+				cur.close()"""
+		return render_template('profile.html', title = 'Profile', form=prof_form)
+	
+	
+
+@app.route("/logout", methods=['GET','POST'])
+def logout():
+	if 'user' in session:
+		session.pop('user',None)
+		flash('You have been logged out','success')
+	return render_template('logout.html', title = 'Logout')
 
 if __name__ == '__main__':
     app.run(debug=True)
